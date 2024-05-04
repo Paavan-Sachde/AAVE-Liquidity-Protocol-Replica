@@ -23,32 +23,38 @@ contract LendingPoolCore {
         emit TransferSent(msg.sender, to, amount);
     }
 
-    function deposit(address depositor, uint256 amount) external {
+    function deposit(address depositor, uint256 amount) external  {
         balances[depositor] += amount;
     }
 
-    function withdraw(address withdrawer, uint256 amount) external {
+    function withdraw(address withdrawer, uint256 amount) external payable {
         require(balances[withdrawer] >= amount, "Insufficient balance");
-        payable(msg.sender).transfer(amount);
+        
         balances[withdrawer] -= amount;
     }
 
-    function borrow(address borrower, uint256 amount) external {
+    function borrow(address borrower, uint256 amount) external   {
         require(balances[borrower] >= amount, "Insufficient balance");
         borrowings[borrower] += amount;
         debt[borrower] += amount;
     }
 
-    function repay(address borrower, uint256 amount) external {
+    function repay(address borrower, uint256 amount) external  {
         require(debt[borrower] >= amount, "Exceeds debt");
         debt[borrower] -= amount;
     }
 
-    function liquidate(address borrower) external {
+    function liquidate(address borrower) external   {
         uint256 amountToLiquidate = debt[borrower];
         require(amountToLiquidate > 0, "No debt to liquidate");
         balances[msg.sender] -= amountToLiquidate;
         balances[borrower] += amountToLiquidate;
         debt[borrower] = 0;
+    }
+    function getAddrbalance(address _accountAddress)
+    public 
+    view 
+    returns (uint256){
+        return _accountAddress.balance;
     }
 }
