@@ -35,6 +35,7 @@ contract LendingPool {
     }
 
     function borrow(uint256 amount) external payable  {
+        payable(msg.sender).transfer(amount);
         core.borrow(msg.sender, amount);
         token.transfer(msg.sender, amount);
     }
