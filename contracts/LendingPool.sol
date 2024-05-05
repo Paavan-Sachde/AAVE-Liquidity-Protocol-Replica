@@ -21,7 +21,7 @@ contract LendingPool {
         core.deposit(msg.sender, amount);
         
         // Mint aTokens to the user based on the deposited amount
-        // aToken.deposit(amount);
+        aToken.deposit(amount);
         aTokenBalance[msg.sender] += amount;
     }
 
@@ -30,7 +30,7 @@ contract LendingPool {
         token.transfer(msg.sender, amount);
         payable(msg.sender).transfer(amount);
         // Burn aTokens equivalent to the withdrawn amount
-        // aToken.redeem(amount);
+        aToken.redeem(amount);
         aTokenBalance[msg.sender] -= amount;
     }
 
