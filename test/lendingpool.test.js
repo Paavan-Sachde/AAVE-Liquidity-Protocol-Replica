@@ -1,51 +1,71 @@
+// Import necessary modules from Hardhat and ethers.js
 const { expect } = require("chai");
+const { ethers } = require("hardhat");
 
-describe("LendingPool", function () {
-    it("Should deposit tokens into the pool", async function () {
-        const LendingPool = await ethers.getContractFactory("LendingPool");
-        const lendingPool = await LendingPool.deploy(1/* constructor arguments if any */);
+describe("LendingPool Contract", function () {
+  let LendingPoolCore, AToken, LendingPool;
+  let lendingPoolCore, aToken, lendingPool;
+  let owner, user;
 
-        console.log("Deployed LendingPool contract");
+  // Deploy the contracts before each test
+  beforeEach(async function () {
+    [owner, user] = await ethers.getSigners();
 
-        await lendingPool.deposit(100);
-        console.log("Deposited 100 tokens");
+    // Deploy LendingPoolCore contract
+    LendingPoolCore = await ethers.getContractFactory("LendingPoolCore");
+    lendingPoolCore = await LendingPoolCore.deploy();
 
-        const balance = await lendingPool.tokenBalance();
-        console.log("Token balance:", balance.toString());
+    // Deploy AToken contract
+    AToken = await ethers.getContractFactory("AToken");
+    aToken = await AToken.deploy("AToken", "ATK");
 
-        expect(balance).to.equal(100);
-        console.log("Deposit test passed");
-    });
+    // Deploy LendingPool contract
+    LendingPool = await ethers.getContractFactory("LendingPool");
+    lendingPool = await LendingPool.deploy(lendingPoolCore.address, aToken.address);
 
-    it("Should withdraw tokens from the pool", async function () {
-        const LendingPool = await ethers.getContractFactory("LendingPool");
-        const lendingPool = await LendingPool.deploy(/* constructor arguments if any */);
+    // Transfer tokens to the user for testing
+    const initialSupply = ethers.utils.parseEther("1000");
+    await aToken.mint(user.address, initialSupply);
+    await aToken.connect(user).approve(lendingPool.address, initialSupply);
+  });
 
-        console.log("Deployed LendingPool contract");
+  it("should deposit tokens and mint aTokens", async function () {
+    const amount = ethers.utils.parseEther("1");
 
-        await lendingPool.deposit(100);
-        console.log("Deposited 100 tokens");
+    // User deposits tokens into the lending pool
+    await lendingPool.connect(user).deposit(amount);
 
-        await lendingPool.withdraw(50);
-        console.log("Withdrawn 50 tokens");
+    // Check the user's aToken balance after deposit
+    const userATokenBalance = await aToken.balanceOf(user.address);
+    expect(userATokenBalance).to.equal(amount);
 
-        const balance = await lendingPool.tokenBalance();
-        console.log("Token balance:", balance.toString());
+    // Check the lending pool's total deposit balance
+    const totalDeposit = await lendingPool.totalDeposit();
+    expect(totalDeposit).to.equal(amount);
 
-        expect(balance).to.equal(50);
-        console.log("Withdraw test passed");
-    });
+    // Check the user's balance in the lending pool
+    const userBalance = await lendingPool.core().balances(user.address);
+    expect(userBalance).to.equal(amount);
+  });
 
-    it("Should not allow withdrawing more tokens than deposited", async function () {
-        const LendingPool = await ethers.getContractFactory("LendingPool");
-        const lendingPool = await LendingPool.deploy(/* constructor arguments if any */);
+  it("should allow borrowing and repaying tokens", async function () {
+    const borrowAmount = ethers.utils.parseEther("0.5");
 
-        console.log("Deployed LendingPool contract");
+    // User borrows tokens from the lending pool
+    await lendingPool.connect(user).borrow(borrowAmount);
 
-        await lendingPool.deposit(100);
-        console.log("Deposited 100 tokens");
+    // Check the user's borrowed amount
+    const userBorrowed = await lendingPool.core().borrowings(user.address);
+    expect(userBorrowed).to.equal(borrowAmount);
 
-        await expect(lendingPool.withdraw(101)).to.be.revertedWith("Not enough tokens in the pool");
-        console.log("Withdrawal limit test passed");
-    });
+    // User repays the borrowed tokens
+    await lendingPool.connect(user).repay(borrowAmount);
+
+    // Check the user's borrowed amount after repayment
+    const userBorrowedAfterRepay = await lendingPool.core().borrowings(user.address);
+    expect(userBorrowedAfterRepay).to.equal(0);
+  });
+
+  // Add more test cases as needed for other functions
+
 });
