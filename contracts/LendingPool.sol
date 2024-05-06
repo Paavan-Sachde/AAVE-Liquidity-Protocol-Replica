@@ -33,7 +33,19 @@ contract LendingPool {
         aToken.redeem(amount);
         aTokenBalance[msg.sender] -= amount;
     }
+    function addCollateral() external payable {
+        require(msg.value != 0, "Cant send 0 ethers");
+        usersCollateral[msg.sender] += msg.value;
+        totalCollateral += msg.value;
+    }
 
+    function removeCollateral(uint256 _amount) external payable {
+        uint256 collateral = usersCollateral[msg.sender];
+        require(collateral > 0, "Dont have any collateral");
+        usersCollateral[msg.sender] -= _amount;
+        totalCollateral -= _amount;
+        payable(address(this)).transfer(_amount);
+    }
     function borrow(uint256 amount) external payable  {
         payable(msg.sender).transfer(amount);
         core.borrow(msg.sender, amount);
